@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f8f8f5" />
+  <meta name="description" content="Write naturally in Tamil using English letters. Download your writing as a Word document, PDF, or text file. Free, private, and 100% browser-based." />
+  <title>e2t — Tamil Writer · தமிழ் எழுத்தாளர்</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/icon.svg" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="e2t Tamil Writer home">
+        <span class="brand-symbol" aria-hidden="true">அ</span>
+        <span class="brand-wordmark">e2t<span class="brand-dot">.</span></span>
+        <span class="brand-divider"></span>
+        <span class="brand-caption">Tamil Writer</span>
+      </a>
+      <a class="header-link" href="#how-it-works">How it works <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <div class="eyebrow"><span class="status-dot"></span> THE SIMPLEST WAY TO WRITE IN TAMIL</div>
+          <h1 id="page-title">Your thoughts.<br /><span class="tamil-gradient" lang="ta">உங்கள் மொழியில்.</span></h1>
+          <p>Type Tanglish using English letters, edit in Tamil, and download Word, PDF or text. No account or file uploads needed.</p>
+          <div class="intro-highlights"><span>✦ Free forever</span><span>✦ Private by design</span><span>✦ Made for Tamil</span></div>
+        </div>
+        <div class="hero-decoration" aria-hidden="true"><div class="decoration-orbit"></div><div class="decoration-letter">ழ</div><div class="decoration-label">words have a home.</div></div>
+      </section>
+
+      <nav class="tool-navigation" aria-label="Tamil writing tools">
+        <a href="#writer" data-route="writer" class="tool-tab" aria-current="page"><span aria-hidden="true">✎</span> Tamil Writer <span class="tool-tab-label">On this device</span></a>
+        <a href="#desh" data-route="desh" class="tool-tab"><span aria-hidden="true">⌨</span> Desh Tamil Typing <span class="tool-tab-label">External tool</span></a>
+        <a href="#translate" data-route="translate" class="tool-tab"><span aria-hidden="true">⇄</span> English → Tamil Translation <span class="tool-tab-label">External tool</span></a>
+      </nav>
+
+      <section id="provider-panel" class="provider-panel" aria-label="External Tamil tool" hidden>
+        <div class="provider-header">
+          <div><div class="side-overline">COMPANION TOOL</div><h2 id="provider-title"></h2><p id="provider-description"></p></div>
+          <a class="provider-back" href="#writer">← Back to writer</a>
+        </div>
+        <div class="provider-actions">
+          <button type="button" id="provider-copy" class="action-button">⧉ Copy my document text</button>
+          <a id="provider-external" class="action-button primary" href="https://www.deshkeyboard.com/tamil-typing/" target="_blank" rel="noopener noreferrer">Open official website ↗</a>
+          <button type="button" id="provider-paste" class="action-button">↓ Paste clipboard into document</button>
+        </div>
+        <div class="provider-notice" role="note"><strong>How to use:</strong> Copy your text, use the tool below or open its official website, then copy the result and paste it into your document. <strong>This website is operated by a third party.</strong> It requires internet and may block embedding. The external page cannot read your saved draft automatically.</div>
+        <div class="provider-frame-wrap">
+          <div class="provider-frame-caption"><span>Embedded website (if permitted by the provider)</span><span>Not loading? Use “Open official website” above.</span></div>
+          <iframe id="provider-frame" title="External Tamil typing tool" loading="lazy" referrerpolicy="no-referrer" allow="microphone; clipboard-read; clipboard-write"></iframe>
+        </div>
+        <p class="provider-disclaimer">Independent companion links; e2t is not affiliated with or endorsed by these services. We do not control their content, availability, privacy policies, or iframe permissions.</p>
+      </section>
+
+      <section id="writer-workspace" class="workspace" aria-label="Tamil writer workspace">
+        <div class="editor-card">
+          <div class="card-header">
+            <div class="card-title-group"><span class="card-icon" aria-hidden="true">✎</span><div><h2>Writer's desk</h2><p>Every great idea begins with a word.</p></div></div>
+            <div id="save-status" class="save-status" role="status"><span class="saved-dot"></span> Saved on this device</div>
+          </div>
+
+          <div class="document-meta">
+            <label for="document-title">DOCUMENT NAME</label>
+            <input id="document-title" type="text" maxlength="120" value="என் ஆவணம்" autocomplete="off" aria-describedby="title-hint" />
+            <span id="title-hint" class="sr-only">Used as the heading and download filename</span>
+          </div>
+
+          <div class="editor-toolbar">
+            <div class="toolbar-label">TYPING MODE</div>
+            <div class="typing-tabs" role="group" aria-label="Typing mode">
+              <button id="mode-phonetic" type="button" class="mode-button selected" aria-pressed="true"><span aria-hidden="true">அ</span> Tanglish <span class="mode-description">a → அ</span></button>
+              <button id="mode-direct" type="button" class="mode-button" aria-pressed="false"><span aria-hidden="true">⌨</span> Direct typing</button>
+            </div>
+            <div class="toolbar-spacer"></div>
+            <label class="size-picker-label" for="editor-size">Text size</label>
+            <select id="editor-size" aria-label="Editor text size"><option value="18">18px</option><option value="20" selected>20px</option><option value="22">22px</option><option value="24">24px</option></select>
+          </div>
+
+          <div class="paper-area">
+            <label for="editor" class="sr-only">Tamil document contents</label>
+            <textarea id="editor" lang="ta" dir="auto" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Start with 'vanakkam'...&#10;&#10;உங்கள் எண்ணங்களை இங்கே எழுதுங்கள்." aria-describedby="typing-help"></textarea>
+            <div id="typing-help" class="typing-tip"><span class="tip-icon">✳</span><span id="typing-help-text">Type <strong>vanakkam</strong> → <strong lang="ta">வணக்கம்</strong>. Press Space to finish a word.</span></div>
+          </div>
+
+          <div class="editor-footer"><div class="editor-stats"><span id="word-count">0 words</span><span class="stat-separator">·</span><span id="character-count">0 characters</span></div><div class="autosave-caption"><span aria-hidden="true">◌</span> Local autosave</div></div>
+
+          <div class="export-panel">
+            <div class="export-heading"><div><h3>Ready to share?</h3><p>Choose how you'd like to save your writing.</p></div><div class="privacy-mark" title="Files are generated in your browser">🔒 100% on-device</div></div>
+            <div class="export-actions">
+              <button type="button" id="download-docx" class="action-button primary"><span aria-hidden="true">↓</span> Download Word <span class="file-extension">.docx</span></button>
+              <button type="button" id="download-pdf" class="action-button"><span aria-hidden="true">▤</span> Save as PDF</button>
+              <button type="button" id="download-txt" class="action-button"><span aria-hidden="true">≡</span> Download Text</button>
+            </div>
+            <div class="utility-actions"><button id="convert-text" type="button" title="Convert English-letter Tamil into Tamil script">அ Convert Tanglish text</button><button id="copy-text" type="button">⧉ Copy text</button><button id="load-text" type="button">↑ Open .txt file</button><button id="clear-text" type="button" class="danger-text">× Clear editor</button><input type="file" id="file-input" accept=".txt,.md,text/plain,text/markdown" hidden /></div>
+          </div>
+        </div>
+
+        <aside class="sidebar" aria-label="Writing tips">
+          <div class="side-card sample-card"><div class="side-overline">GET STARTED IN SECONDS</div><h2>English in.<br /><span>Tamil out.</span></h2><p>Write the way you speak. We'll take care of the letters.</p><div class="sample-list"><button type="button" class="sample-row" data-sample="vanakkam"><span>vanakkam</span><strong lang="ta">வணக்கம்</strong><span class="sample-arrow">↗</span></button><button type="button" class="sample-row" data-sample="nandri"><span>nandri</span><strong lang="ta">நன்றி</strong><span class="sample-arrow">↗</span></button><button type="button" class="sample-row" data-sample="tamizh"><span>tamizh</span><strong lang="ta">தமிழ்</strong><span class="sample-arrow">↗</span></button><button type="button" class="sample-row" data-sample="amma"><span>amma</span><strong lang="ta">அம்மா</strong><span class="sample-arrow">↗</span></button></div><div class="sample-caption">Click any example to add it to your document.</div></div>
+          <div class="side-card privacy-card"><span class="side-badge">✦ BUILT DIFFERENT</span><h3>Your local writing stays yours.</h3><p>The built-in editor works privately on your device. When you open external typing or translation services, their own privacy policies apply.</p><div class="privacy-emblem" aria-hidden="true">⌁</div></div>
+          <div class="side-card mini-guide"><div class="side-overline">QUICK KEYBOARD GUIDE</div><div class="guide-grid"><div><kbd>aa</kbd><span lang="ta">ஆ</span></div><div><kbd>zh</kbd><span lang="ta">ழ்</span></div><div><kbd>th</kbd><span lang="ta">த்</span></div><div><kbd>N</kbd><span lang="ta">ண்</span></div><div><kbd>L</kbd><span lang="ta">ள்</span></div><div><kbd>R</kbd><span lang="ta">ற்</span></div></div></div>
+        </aside>
+      </section>
+
+      <section class="steps" id="how-it-works" aria-labelledby="steps-heading"><div class="steps-header"><span class="side-overline">AS EASY AS 1, 2, 3</span><h2 id="steps-heading">From idea to document.</h2></div><div class="steps-grid"><div class="step"><div class="step-number">01</div><h3>Start writing</h3><p>Type using English letters or switch to your Tamil keyboard.</p></div><div class="step"><div class="step-number">02</div><h3>Make it yours</h3><p>Choose a document name and adjust text size as you write.</p></div><div class="step"><div class="step-number">03</div><h3>Download it</h3><p>Export Word or text instantly, or use Print → Save as PDF.</p></div></div></section>
+    </main>
+    <footer class="site-footer"><span><strong>e2t.</strong> Made for every Tamil voice.</span><span>Built for the browser. Built for privacy.</span></footer>
+  </div>
+  <div id="toast" role="status" aria-live="polite" class="toast" hidden></div>
+  <article id="print-document" class="print-document" aria-hidden="true"><h1 id="print-title"></h1><div id="print-body"></div></article>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

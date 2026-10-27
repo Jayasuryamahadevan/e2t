@@ -4,14 +4,15 @@ A free, privacy-first Tamil writing workspace. Type Tanglish (Romanized Tamil) o
 
 ## Features
 
-- Live English-to-Tamil phonetic input and direct Unicode Tamil typing.
+- Live English-to-Tamil phonetic input, batch Tanglish conversion, and direct Unicode Tamil typing.
 - Native Tamil characters, without remote translation services or a backend.
 - Document title, character and word counts, and adjustable editor font size.
 - Word export using a small built-in Office Open XML ZIP writer (no runtime dependencies).
 - UTF-8 text export and print-to-PDF with browser-native Tamil glyph shaping.
 - Local autosave using `localStorage`, import `.txt` / `.md`, clipboard copy, and a confirmation before clearing.
 - Responsive desktop/mobile interface; installable PWA with offline static asset caching.
-- 100% client-side: documents are never sent to a server.
+- 100% client-side for the built-in writer: documents are never sent to our server.
+- Hash-based `#writer`, `#desh`, and `#translate` routes compatible with GitHub Pages. Optional external iframe views and prominent official-site fallback links.
 
 ## Run locally
 
@@ -31,7 +32,7 @@ Unit tests cover phonetic conversion, Unicode/XML escaping, generated DOCX struc
 
 ## Static hosting
 
-Deploy the repository directly to GitHub Pages, Netlify, Cloudflare Pages or Vercel as static files. There is no build step. On GitHub Pages, set the publishing source to **Deploy from a branch** → `main` → `/ (root)`.
+Deploy the repository directly to GitHub Pages, Netlify, Cloudflare Pages, or Vercel as static files. There is no build step. A Pages deployment workflow is included. On GitHub, go to **Settings → Pages → Build and deployment → Source → GitHub Actions** to enable publishing (one-time setup). The live site will then be at `https://jayasuryamahadevan.github.io/e2t/` after a successful deployment. Alternatively you can choose **Deploy from a branch → main → / (root)** for GitHub-managed static publishing.
 
 ## How PDF downloads work
 
@@ -51,9 +52,17 @@ Click **Save as PDF** to open the browser's print dialog, and select **Save as P
 
 The phonetic mode uses a lightweight deterministic transliteration table with a short set of common-word overrides. It is **not** a full natural-language suggestion engine. For exact spellings, users can switch to their device's Tamil keyboard in **Direct typing** mode.
 
+## External Tamil tools / routing
+
+- **Tamil Writer (`#writer`)**: Native, on-device Tamil text editor, document export and draft autosave. No server or API needed.
+- **Desh Tamil Keyboard (`#desh`)**: Opens `https://www.deshkeyboard.com/tamil-typing/` inside an optional iframe where allowed, with a guaranteed link to the official site. For phonetic typing and suggestions.
+- **Easy Tamil Typing translation (`#translate`)**: Opens `https://www.easytamiltyping.com/english/to/tamil/translation` the same way. For translating the *meaning* of English phrases into Tamil, not transliterating phonetic Tanglish.
+
+Use **Copy my document text** to move writing to the external service and **Paste clipboard into document** to add its result to the writer. Browsers prohibit reading or controlling cross-origin iframe content, and providers may prohibit embedding; there is deliberately no undocumented API scraping or iframe bypass. External services require connectivity, are not affiliated with e2t, and have their own terms and privacy policies. Opening those views shares your browser connection with the external provider, but your draft is never automatically uploaded to them.
+
 ## Privacy
 
-Drafts are stored locally on the device. DOCX/TXT bytes are generated in the browser, and the print dialog handles PDF output. The application contains no analytics, remote API requests, or third-party JavaScript dependencies.
+Drafts are stored locally on the device. DOCX/TXT bytes are generated in the browser, and the print dialog handles PDF output. The native editor contains no analytics, remote API requests, or third-party JavaScript dependencies. Selecting an external tool loads that provider, which may set cookies or collect data under its own privacy terms.
 
 ## License
 
