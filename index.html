@@ -27,7 +27,7 @@
         <div class="intro-copy">
           <div class="eyebrow"><span class="status-dot"></span> THE SIMPLEST WAY TO WRITE IN TAMIL</div>
           <h1 id="page-title">Your thoughts.<br /><span class="tamil-gradient" lang="ta">உங்கள் மொழியில்.</span></h1>
-          <p>Type Tanglish using English letters, edit in Tamil, and download Word, PDF or text. No account or file uploads needed.</p>
+          <p>Type Tanglish using English letters, edit in Tamil, and download Word, PDF or text. No account or uploads needed for writing and downloading.</p>
           <div class="intro-highlights"><span>✦ Free forever</span><span>✦ Private by design</span><span>✦ Made for Tamil</span></div>
         </div>
         <div class="hero-decoration" aria-hidden="true"><div class="decoration-orbit"></div><div class="decoration-letter">ழ</div><div class="decoration-label">words have a home.</div></div>
@@ -36,7 +36,8 @@
       <nav class="tool-navigation" aria-label="Tamil writing tools">
         <a href="#writer" data-route="writer" class="tool-tab" aria-current="page"><span aria-hidden="true">✎</span> Tamil Writer <span class="tool-tab-label">On this device</span></a>
         <a href="#desh" data-route="desh" class="tool-tab"><span aria-hidden="true">⌨</span> Desh Tamil Typing <span class="tool-tab-label">External tool</span></a>
-        <a href="#translate" data-route="translate" class="tool-tab"><span aria-hidden="true">⇄</span> English → Tamil Translation <span class="tool-tab-label">External tool</span></a>
+        <a href="#translate" data-route="translate" class="tool-tab"><span aria-hidden="true">⇄</span> Easy Tamil Typing <span class="tool-tab-label">External tool</span></a>
+        <a href="#google" data-route="google" class="tool-tab"><span aria-hidden="true">◈</span> Google Translate <span class="tool-tab-label">Text · Images · Files</span></a>
       </nav>
 
       <section id="provider-panel" class="provider-panel" aria-label="External Tamil tool" hidden>
@@ -55,6 +56,79 @@
           <iframe id="provider-frame" title="External Tamil typing tool" loading="lazy" referrerpolicy="no-referrer" allow="microphone; clipboard-read; clipboard-write"></iframe>
         </div>
         <p class="provider-disclaimer">Independent companion links; e2t is not affiliated with or endorsed by these services. We do not control their content, availability, privacy policies, or iframe permissions.</p>
+      </section>
+
+      <section id="google-panel" class="google-panel" aria-labelledby="google-heading" hidden>
+        <header class="google-header">
+          <div>
+            <div class="side-overline">GOOGLE TRANSLATE COMPANION</div>
+            <h2 id="google-heading">Translate text, images & documents.</h2>
+            <p>Use Google Translate’s official website from one place. Select a mode, then continue on Google to translate; no API key or backend required.</p>
+          </div>
+          <a href="#writer" class="provider-back">← Back to Tamil Writer</a>
+        </header>
+        <div class="google-language-controls">
+          <label for="google-source-language">From
+            <select id="google-source-language">
+              <option value="auto" selected>Detect language</option>
+              <option value="en">English</option>
+              <option value="ta">Tamil (தமிழ்)</option>
+              <option value="hi">Hindi</option>
+              <option value="ml">Malayalam</option>
+              <option value="te">Telugu</option>
+            </select>
+          </label>
+          <span class="google-direction" aria-hidden="true">→</span>
+          <label for="google-target-language">To
+            <select id="google-target-language">
+              <option value="ta" selected>Tamil (தமிழ்)</option>
+              <option value="en">English</option>
+              <option value="hi">Hindi</option>
+              <option value="ml">Malayalam</option>
+              <option value="te">Telugu</option>
+            </select>
+          </label>
+        </div>
+        <div class="google-mode-tabs" role="tablist" aria-label="Google Translate modes">
+          <button type="button" id="google-tab-text" data-google-mode="text" role="tab" aria-selected="true" aria-controls="google-mode-text" class="active">✎ Text</button>
+          <button type="button" id="google-tab-images" data-google-mode="images" role="tab" aria-selected="false" aria-controls="google-mode-images">▧ Images</button>
+          <button type="button" id="google-tab-documents" data-google-mode="documents" role="tab" aria-selected="false" aria-controls="google-mode-documents">▤ Documents</button>
+          <button type="button" id="google-tab-websites" data-google-mode="websites" role="tab" aria-selected="false" aria-controls="google-mode-websites">↗ Websites</button>
+        </div>
+        <section class="google-mode-content" id="google-mode-text" role="tabpanel" aria-labelledby="google-tab-text">
+          <div class="google-mode-heading"><h3>Translate written text</h3><span class="google-tag">Source stays here until you open Google</span></div>
+          <label for="google-text" class="google-field-label">TEXT TO TRANSLATE</label>
+          <textarea id="google-text" dir="auto" rows="7" placeholder="Paste English or Tamil text here, or import the text from your writer…"></textarea>
+          <div class="google-text-meta"><span id="google-text-count">0 characters</span><button id="google-use-editor" type="button">↑ Use my writer text</button></div>
+          <div class="google-action-row">
+            <a id="google-open-text" class="action-button primary" target="_blank" rel="noopener noreferrer" href="https://translate.google.co.in/?sl=auto&amp;tl=ta&amp;op=translate">Open translation on Google ↗</a>
+            <button id="google-copy-source" class="action-button" type="button">⧉ Copy source</button>
+            <button id="google-paste-result" class="action-button" type="button">↓ Paste result into writer</button>
+          </div>
+          <p id="google-text-status" class="google-note" role="status" aria-live="polite">Text is sent to Google Translate only when you open the link. Copy the result on Google and paste it back into the writer if needed.</p>
+        </section>
+        <section class="google-mode-content" id="google-mode-images" role="tabpanel" aria-labelledby="google-tab-images" hidden>
+          <div class="google-icon" aria-hidden="true">▧</div>
+          <h3>Translate text inside images</h3>
+          <p>Google Translate accepts JPG, PNG and WebP images. Open Google, choose <strong>Images</strong>, then select your image on Google’s website. Google may let you copy translated text or download the translated image.</p>
+          <a id="google-open-images" class="action-button primary google-main-link" target="_blank" rel="noopener noreferrer" href="https://translate.google.co.in/?sl=auto&amp;tl=ta&amp;op=images">Open Google image translation ↗</a>
+          <p class="google-note">For your privacy, e2t does not read or upload your selected images. Any image you upload to Google is processed under Google’s terms.</p>
+        </section>
+        <section class="google-mode-content" id="google-mode-documents" role="tabpanel" aria-labelledby="google-tab-documents" hidden>
+          <div class="google-icon" aria-hidden="true">▤</div>
+          <h3>Translate Word, PDF & Office files</h3>
+          <p>Open Google Translate’s <strong>Documents</strong> mode and select a <strong>.docx, .pdf, .pptx or .xlsx</strong> file there. Supported documents are up to 10 MB; PDFs may have up to 300 pages. Google offers a translated document to download.</p>
+          <a id="google-open-documents" class="action-button primary google-main-link" target="_blank" rel="noopener noreferrer" href="https://translate.google.co.in/?sl=auto&amp;tl=ta&amp;op=docs">Open Google document translation ↗</a>
+          <p class="google-note">Google’s document translator is not available on small screens. Text inside scanned PDF pages is not translated. Your files are uploaded directly to Google, not through e2t.</p>
+        </section>
+        <section class="google-mode-content" id="google-mode-websites" role="tabpanel" aria-labelledby="google-tab-websites" hidden>
+          <div class="google-icon" aria-hidden="true">↗</div>
+          <h3>Translate a website</h3>
+          <p>Open Google Translate’s <strong>Websites</strong> mode, paste the website URL there, and start translating. Availability depends on Google’s region and browser support.</p>
+          <a id="google-open-websites" class="action-button primary google-main-link" target="_blank" rel="noopener noreferrer" href="https://translate.google.co.in/?sl=auto&amp;tl=ta&amp;op=websites">Open Google website translation ↗</a>
+          <p class="google-note">This follows the <code>op=websites</code> mode from your example link. Text translation uses <code>op=translate</code> instead.</p>
+        </section>
+        <div class="google-privacy"><strong>Independent integration:</strong> Google Translate is operated by Google. e2t links to its public website, rather than using an undocumented translation API. Translations and uploads happen on Google; your locally saved writer draft is never shared automatically.</div>
       </section>
 
       <section id="writer-workspace" class="workspace" aria-label="Tamil writer workspace">

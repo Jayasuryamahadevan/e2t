@@ -42,7 +42,7 @@ test('browser app handles phonetic typing, direct typing, PDF dialog and autosav
   const windowEvents = new Map();
   globalThis.document = {
     getElementById: get,
-    querySelectorAll: () => [],
+    querySelectorAll: selector => selector === '[data-google-mode]' ? ['text','images','documents','websites'].map(mode => { const el = get('google-tab-' + mode); el.dataset.googleMode = mode; return el; }) : [],
     createElement: () => new Element(),
     body: { append() {} },
   };
@@ -103,8 +103,29 @@ test('browser app handles phonetic typing, direct typing, PDF dialog and autosav
     window.location.hash = '#translate';
     windowEvents.get('hashchange')();
     assert.equal(get('provider-external').href, 'https://www.easytamiltyping.com/english/to/tamil/translation');
+    window.location.hash = '#google';
+    windowEvents.get('hashchange')();
+    assert.equal(get('google-panel').hidden, false);
+    assert.equal(get('provider-panel').hidden, true);
+    assert.equal(get('writer-workspace').hidden, true);
+    get('google-use-editor').click();
+    assert.equal(get('google-text').value, 'வணக்கம் நன்றி');
+    let url = new URL(get('google-open-text').href);
+    assert.equal(url.searchParams.get('text'), 'வணக்கம் நன்றி');
+    assert.equal(url.searchParams.get('tl'), 'ta');
+    get('google-target-language').value = 'en';
+    get('google-target-language').dispatch('change');
+    url = new URL(get('google-open-text').href);
+    assert.equal(url.searchParams.get('tl'), 'en');
+    get('google-tab-images').click();
+    assert.equal(get('google-mode-images').hidden, false);
+    assert.equal(new URL(get('google-open-images').href).searchParams.get('op'), 'images');
+    get('google-tab-documents').click();
+    assert.equal(get('google-mode-documents').hidden, false);
+    assert.equal(new URL(get('google-open-documents').href).searchParams.get('op'), 'docs');
     window.location.hash = '#writer';
     windowEvents.get('hashchange')();
+    assert.equal(get('google-panel').hidden, true);
     assert.equal(get('provider-frame').getAttribute('src'), null);
     get('mode-direct').click();
     type('a');

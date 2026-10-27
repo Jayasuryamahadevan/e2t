@@ -1,5 +1,6 @@
 import { transliterateWord, transliterateText } from './lib/transliterate.js';
 import { createDocx, safeFileName } from './lib/docx.js';
+import { buildGoogleTranslateUrl, getTextHandoff } from './lib/google-translate.js';
 
 const $ = id => document.getElementById(id);
 const editor = $('editor');
@@ -240,14 +241,15 @@ const PROVIDERS = Object.freeze({
 
 function routeFromHash(hash) {
   const candidate = String(hash || '').replace(/^#/, '').toLowerCase();
-  return Object.hasOwn(PROVIDERS, candidate) ? candidate : 'writer';
+  return candidate === 'google' || Object.hasOwn(PROVIDERS, candidate) ? candidate : 'writer';
 }
 
 function renderRoute() {
   const route = routeFromHash(window.location?.hash || '');
   const provider = PROVIDERS[route];
-  $('writer-workspace').hidden = Boolean(provider);
+  $('writer-workspace').hidden = route !== 'writer';
   $('provider-panel').hidden = !provider;
+  $('google-panel').hidden = route !== 'google';
   document.querySelectorAll('[data-route]').forEach(link => {
     link.setAttribute('aria-current', link.dataset.route === route ? 'page' : 'false');
   });
@@ -300,6 +302,58 @@ $('convert-text').addEventListener('click', () => {
   scheduleSave();
   announce('Converted Tanglish words to Tamil script.');
 });
+
+// Google Translate’s public website is a user-facing destination, not a translation API.
+// A URL may prefill short text, but browser origin rules prevent reading Google's result.
+let googleMode = 'text';
+function refreshGoogleLinks() {
+  const source = $('google-source-language').value || 'auto';
+  const target = $('google-target-language').value || 'ta';
+  const input = $('google-text').value;
+  const handoff = getTextHandoff({source, target, text: input});
+  $('google-open-text').href = handoff.url;
+  $('google-text-count').textContent = `${[...input].length.toLocaleString()} characters`;
+  $('google-text-status').textContent = handoff.needsManualPaste
+    ? 'This text is too long for a reliable browser link. Use “Copy source”, open Google, and paste it there. Nothing has been shortened.'
+    : 'Opening the link shares this text with Google Translate. Copy the translation from Google and paste it back into your document if needed.';
+  for (const mode of ['images', 'documents', 'websites']) {
+    $('google-open-' + mode).href = buildGoogleTranslateUrl({mode, source, target});
+  }
+}
+
+function setGoogleMode(mode) {
+  if (!['text', 'images', 'documents', 'websites'].includes(mode)) return;
+  googleMode = mode;
+  for (const section of ['text', 'images', 'documents', 'websites']) {
+    $('google-mode-' + section).hidden = section !== mode;
+    const tab = $('google-tab-' + section);
+    tab.setAttribute('aria-selected', String(section === mode));
+    tab.classList.toggle('active', section === mode);
+  }
+}
+
+document.querySelectorAll('[data-google-mode]').forEach(button => button.addEventListener('click', () => setGoogleMode(button.dataset.googleMode)));
+$('google-source-language').addEventListener('change', refreshGoogleLinks);
+$('google-target-language').addEventListener('change', refreshGoogleLinks);
+$('google-text').addEventListener('input', refreshGoogleLinks);
+$('google-use-editor').addEventListener('click', () => {
+  if (!editor.value.trim()) { announce('Your writer is empty. Add text first.'); return; }
+  if ($('google-text').value.trim() && $('google-text').value !== editor.value && !window.confirm('Replace the text prepared for Google Translate with your writer text?')) return;
+  $('google-text').value = editor.value;
+  refreshGoogleLinks();
+  announce('Writer text loaded. Open Google to translate it.');
+});
+$('google-copy-source').addEventListener('click', async () => {
+  const text = $('google-text').value;
+  if (!text.trim()) { announce('Add text to copy.'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    announce('Source text copied. Paste it on Google.');
+  } catch { announce('Clipboard unavailable. Select the text and use Ctrl+C.'); }
+});
+$('google-paste-result').addEventListener('click', () => $('provider-paste').click());
+refreshGoogleLinks();
+setGoogleMode(googleMode);
 
 window.addEventListener('pagehide', () => { clearTimeout(saveTimer); saveDraft(); });
 restoreDraft();

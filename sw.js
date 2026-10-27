@@ -1,5 +1,5 @@
-const CACHE_NAME = 'e2t-static-v2';
-const ASSETS = ['./', './index.html', './styles.css', './app.js', './lib/docx.js', './lib/transliterate.js', './assets/icon.svg', './manifest.webmanifest'];
+const CACHE_NAME = 'e2t-static-v3';
+const ASSETS = ['./', './index.html', './styles.css', './app.js', './lib/docx.js', './lib/transliterate.js', './lib/google-translate.js', './assets/icon.svg', './manifest.webmanifest'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
