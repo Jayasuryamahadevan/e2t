@@ -1,6 +1,8 @@
 import { transliterateWord, transliterateText } from './lib/transliterate.js';
 import { createDocx, safeFileName } from './lib/docx.js';
-import { buildGoogleTranslateUrl, getTextHandoff } from './lib/google-translate.js';
+import { translateRequest, imageToBase64, validateEndpoint, MAX_TEXT_LENGTH } from './lib/translation-api.js';
+import { extractDocumentText } from './lib/document-reader.js';
+import { DEFAULT_TRANSLATION_API_URL } from './lib/translation-config.js';
 
 const $ = id => document.getElementById(id);
 const editor = $('editor');
@@ -303,28 +305,23 @@ $('convert-text').addEventListener('click', () => {
   announce('Converted Tanglish words to Tamil script.');
 });
 
-// Google Translate’s public website is a user-facing destination, not a translation API.
-// A URL may prefill short text, but browser origin rules prevent reading Google's result.
+// Translation POST requests target an owner-configured serverless API, not Google's browser website.
+const TRANSLATION_ENDPOINT_KEY = 'e2t-translation-api-url';
 let googleMode = 'text';
-function refreshGoogleLinks() {
-  const source = $('google-source-language').value || 'auto';
-  const target = $('google-target-language').value || 'ta';
-  const input = $('google-text').value;
-  const handoff = getTextHandoff({source, target, text: input});
-  $('google-open-text').href = handoff.url;
-  $('google-text-count').textContent = `${[...input].length.toLocaleString()} characters`;
-  $('google-text-status').textContent = handoff.needsManualPaste
-    ? 'This text is too long for a reliable browser link. Use “Copy source”, open Google, and paste it there. Nothing has been shortened.'
-    : 'Opening the link shares this text with Google Translate. Copy the translation from Google and paste it back into your document if needed.';
-  for (const mode of ['images', 'documents', 'websites']) {
-    $('google-open-' + mode).href = buildGoogleTranslateUrl({mode, source, target});
-  }
+let currentRequest = null;
+let lastCompletedText = '';
+let activeRequestId = 0;
+
+function setTranslationStatus(message, kind = '') {
+  const status = $('google-text-status');
+  status.textContent = message;
+  status.dataset.state = kind;
 }
 
 function setGoogleMode(mode) {
-  if (!['text', 'images', 'documents', 'websites'].includes(mode)) return;
+  if (!['text', 'images', 'documents'].includes(mode)) return;
   googleMode = mode;
-  for (const section of ['text', 'images', 'documents', 'websites']) {
+  for (const section of ['text', 'images', 'documents']) {
     $('google-mode-' + section).hidden = section !== mode;
     const tab = $('google-tab-' + section);
     tab.setAttribute('aria-selected', String(section === mode));
@@ -332,28 +329,156 @@ function setGoogleMode(mode) {
   }
 }
 
+function setRequestBusy(busy) {
+  for (const id of ['google-translate-text', 'google-translate-image', 'google-translate-document']) $(id).disabled = busy;
+  $('google-cancel').hidden = !busy;
+}
+
+function setResult(sourceText, translatedText, detected) {
+  $('google-source-preview').value = sourceText;
+  $('google-result').value = translatedText;
+  $('google-detected-language').hidden = !detected;
+  $('google-detected-language').textContent = detected ? `Detected: ${detected.toUpperCase()}` : '';
+  lastCompletedText = translatedText;
+  $('google-copy-result').disabled = !translatedText.trim();
+  $('google-insert-result').disabled = !translatedText.trim();
+}
+
+function translationEndpoint() {
+  return validateEndpoint($('google-api-url').value);
+}
+
+function updateConnection() {
+  try {
+    translationEndpoint();
+    $('google-connection').textContent = 'Endpoint set · not verified';
+    $('google-connection').dataset.state = 'configured';
+  } catch {
+    $('google-connection').textContent = 'Not configured';
+    $('google-connection').dataset.state = 'missing';
+  }
+}
+
+try { $('google-api-url').value = localStorage.getItem(TRANSLATION_ENDPOINT_KEY) || DEFAULT_TRANSLATION_API_URL; } catch {}
+updateConnection();
+
+$('google-save-endpoint').addEventListener('click', () => {
+  try {
+    const url = translationEndpoint();
+    localStorage.setItem(TRANSLATION_ENDPOINT_KEY, url);
+    $('google-api-url').value = url;
+    updateConnection();
+    setTranslationStatus('Endpoint saved. Select Translate to check connectivity.', 'info');
+  } catch (err) { setTranslationStatus(err.message, 'error'); }
+});
+$('google-api-url').addEventListener('input', updateConnection);
+
 document.querySelectorAll('[data-google-mode]').forEach(button => button.addEventListener('click', () => setGoogleMode(button.dataset.googleMode)));
-$('google-source-language').addEventListener('change', refreshGoogleLinks);
-$('google-target-language').addEventListener('change', refreshGoogleLinks);
-$('google-text').addEventListener('input', refreshGoogleLinks);
+$('google-text').addEventListener('input', () => {
+  const text = $('google-text').value;
+  $('google-text-count').textContent = `${Array.from(text).length.toLocaleString()} / ${MAX_TEXT_LENGTH.toLocaleString()} characters`;
+});
 $('google-use-editor').addEventListener('click', () => {
   if (!editor.value.trim()) { announce('Your writer is empty. Add text first.'); return; }
-  if ($('google-text').value.trim() && $('google-text').value !== editor.value && !window.confirm('Replace the text prepared for Google Translate with your writer text?')) return;
+  if (Array.from(editor.value).length > MAX_TEXT_LENGTH) { announce('Writer text is too long. Select a smaller section.'); return; }
+  if ($('google-text').value.trim() && $('google-text').value !== editor.value && !window.confirm('Replace the translation source with your writer text?')) return;
   $('google-text').value = editor.value;
-  refreshGoogleLinks();
-  announce('Writer text loaded. Open Google to translate it.');
+  $('google-text').dispatchEvent(new Event('input'));
+  setGoogleMode('text');
+  announce('Writer text loaded.');
 });
 $('google-copy-source').addEventListener('click', async () => {
-  const text = $('google-text').value;
-  if (!text.trim()) { announce('Add text to copy.'); return; }
-  try {
-    await navigator.clipboard.writeText(text);
-    announce('Source text copied. Paste it on Google.');
-  } catch { announce('Clipboard unavailable. Select the text and use Ctrl+C.'); }
+  if (!$('google-text').value.trim()) { announce('Add text to copy.'); return; }
+  try { await navigator.clipboard.writeText($('google-text').value); announce('Source text copied.'); }
+  catch { $('google-text').focus(); $('google-text').select(); announce('Use Ctrl+C to copy.'); }
 });
-$('google-paste-result').addEventListener('click', () => $('provider-paste').click());
-refreshGoogleLinks();
-setGoogleMode(googleMode);
+
+$('google-swap-languages').addEventListener('click', () => {
+  const source = $('google-source-language');
+  const target = $('google-target-language');
+  if (source.value === 'auto') {
+    source.value = target.value;
+    target.value = source.value === 'en' ? 'ta' : 'en';
+  } else {
+    const oldSource = source.value;
+    source.value = target.value;
+    target.value = oldSource;
+  }
+  if ($('google-result').value.trim()) {
+    const oldText = $('google-text').value;
+    $('google-text').value = $('google-result').value;
+    $('google-result').value = oldText;
+    $('google-text').dispatchEvent(new Event('input'));
+  }
+});
+
+async function performTranslation({kind, text, file}) {
+  // Ensure no older completion can overwrite the newest translation.
+  if (currentRequest) currentRequest.abort();
+  const id = ++activeRequestId;
+  const controller = new AbortController();
+  currentRequest = controller;
+  const timer = setTimeout(() => controller.abort(), 30000);
+  setRequestBusy(true);
+  setResult('', '', '');
+  setTranslationStatus('Preparing your translation…', 'busy');
+  try {
+    const endpoint = translationEndpoint();
+    const source = $('google-source-language').value;
+    const target = $('google-target-language').value;
+    let bodyText = text;
+    let imageBase64;
+    if (kind === 'document') bodyText = await extractDocumentText(file);
+    if (kind === 'image') imageBase64 = await imageToBase64(file);
+    if (controller.signal.aborted || id !== activeRequestId) return;
+    setTranslationStatus('Translating securely via your API…', 'busy');
+    const result = await translateRequest({endpoint, source, target, text: bodyText, imageBase64, signal: controller.signal});
+    if (id !== activeRequestId || controller.signal.aborted) return;
+    setResult(result.sourceText, result.translatedText, result.detectedSourceLanguage);
+    setTranslationStatus('Translation complete. Edit the result, copy it, or add it to your document.', 'success');
+  } catch (error) {
+    if (id !== activeRequestId) return;
+    setTranslationStatus(error.name === 'AbortError' ? 'Request cancelled or timed out.' : error.message, 'error');
+  } finally {
+    clearTimeout(timer);
+    if (id === activeRequestId) { currentRequest = null; setRequestBusy(false); }
+  }
+}
+
+$('google-translate-text').addEventListener('click', () => performTranslation({kind: 'text', text: $('google-text').value}));
+$('google-translate-image').addEventListener('click', () => performTranslation({kind: 'image', file: $('google-image-file').files?.[0]}));
+$('google-translate-document').addEventListener('click', () => performTranslation({kind: 'document', file: $('google-document-file').files?.[0]}));
+$('google-cancel').addEventListener('click', () => {
+  if (currentRequest) currentRequest.abort();
+  setTranslationStatus('Request cancelled.', 'info');
+});
+for (const [id, caption] of [['google-image-file', 'google-image-description'], ['google-document-file', 'google-document-description']]) {
+  $(id).addEventListener('change', () => {
+    const file = $(id).files?.[0];
+    $(caption).textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(1)} KB` : 'No file selected.';
+  });
+}
+$('google-result').addEventListener('input', () => {
+  const enabled = !!$('google-result').value.trim();
+  $('google-copy-result').disabled = !enabled;
+  $('google-insert-result').disabled = !enabled;
+});
+$('google-copy-result').addEventListener('click', async () => {
+  if (!$('google-result').value.trim()) return;
+  try { await navigator.clipboard.writeText($('google-result').value); announce('Translation copied.'); }
+  catch { $('google-result').focus(); $('google-result').select(); announce('Use Ctrl+C to copy.'); }
+});
+$('google-insert-result').addEventListener('click', () => {
+  const text = $('google-result').value.trim();
+  if (!text) return;
+  const separator = editor.value && !editor.value.endsWith('\n') ? '\n\n' : '';
+  insertAtSelection(separator + text, editor.value.length, editor.value.length);
+  activeWord = null;
+  window.location.hash = '#writer';
+  renderRoute();
+  announce('Translation added to writer. Download as DOCX or PDF whenever ready.');
+});
+setGoogleMode('text');
 
 window.addEventListener('pagehide', () => { clearTimeout(saveTimer); saveDraft(); });
 restoreDraft();

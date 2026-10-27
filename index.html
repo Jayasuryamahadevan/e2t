@@ -37,7 +37,7 @@
         <a href="#writer" data-route="writer" class="tool-tab" aria-current="page"><span aria-hidden="true">✎</span> Tamil Writer <span class="tool-tab-label">On this device</span></a>
         <a href="#desh" data-route="desh" class="tool-tab"><span aria-hidden="true">⌨</span> Desh Tamil Typing <span class="tool-tab-label">External tool</span></a>
         <a href="#translate" data-route="translate" class="tool-tab"><span aria-hidden="true">⇄</span> Easy Tamil Typing <span class="tool-tab-label">External tool</span></a>
-        <a href="#google" data-route="google" class="tool-tab"><span aria-hidden="true">◈</span> Google Translate <span class="tool-tab-label">Text · Images · Files</span></a>
+        <a href="#google" data-route="google" class="tool-tab"><span aria-hidden="true">◈</span> Translate <span class="tool-tab-label">In-page API</span></a>
       </nav>
 
       <section id="provider-panel" class="provider-panel" aria-label="External Tamil tool" hidden>
@@ -61,74 +61,79 @@
       <section id="google-panel" class="google-panel" aria-labelledby="google-heading" hidden>
         <header class="google-header">
           <div>
-            <div class="side-overline">GOOGLE TRANSLATE COMPANION</div>
-            <h2 id="google-heading">Translate text, images & documents.</h2>
-            <p>Use Google Translate’s official website from one place. Select a mode, then continue on Google to translate; no API key or backend required.</p>
+            <div class="side-overline">IN-PAGE TRANSLATION · POWERED BY GOOGLE CLOUD APIS</div>
+            <h2 id="google-heading">Translate without leaving e2t.</h2>
+            <p>Submit text, an image, or a document. The result appears here, ready to edit, copy or export. Translation needs a connected API; Tamil typing and document downloads remain private and on-device.</p>
           </div>
           <a href="#writer" class="provider-back">← Back to Tamil Writer</a>
         </header>
+
+        <div class="google-service-config">
+          <div class="google-config-heading"><strong>Translation service</strong><span id="google-connection" class="google-connection" role="status">Not configured</span></div>
+          <label class="google-field-label" for="google-api-url">YOUR DEPLOYED API ENDPOINT</label>
+          <div class="google-config-row"><input type="url" id="google-api-url" spellcheck="false" placeholder="https://e2t-translate-api.YOURNAME.workers.dev/translate" autocomplete="off" />
+          <button type="button" id="google-save-endpoint" class="action-button">Save endpoint</button></div>
+          <p class="google-config-hint">Site owner: deploy the included Cloudflare Worker, then publish its URL in <code>lib/translation-config.js</code> for all visitors. This field can also override the endpoint on this device. Never enter a Google API key here.</p>
+        </div>
+
         <div class="google-language-controls">
           <label for="google-source-language">From
             <select id="google-source-language">
-              <option value="auto" selected>Detect language</option>
-              <option value="en">English</option>
-              <option value="ta">Tamil (தமிழ்)</option>
-              <option value="hi">Hindi</option>
-              <option value="ml">Malayalam</option>
-              <option value="te">Telugu</option>
+              <option value="auto" selected>Detect language</option><option value="en">English</option><option value="ta">Tamil (தமிழ்)</option>
+              <option value="hi">Hindi</option><option value="ml">Malayalam</option><option value="te">Telugu</option>
             </select>
           </label>
-          <span class="google-direction" aria-hidden="true">→</span>
+          <button type="button" id="google-swap-languages" class="google-swap" aria-label="Swap source and target languages" title="Swap languages">⇄</button>
           <label for="google-target-language">To
             <select id="google-target-language">
-              <option value="ta" selected>Tamil (தமிழ்)</option>
-              <option value="en">English</option>
-              <option value="hi">Hindi</option>
-              <option value="ml">Malayalam</option>
-              <option value="te">Telugu</option>
+              <option value="ta" selected>Tamil (தமிழ்)</option><option value="en">English</option>
+              <option value="hi">Hindi</option><option value="ml">Malayalam</option><option value="te">Telugu</option>
             </select>
           </label>
         </div>
-        <div class="google-mode-tabs" role="tablist" aria-label="Google Translate modes">
+
+        <div class="google-mode-tabs" role="tablist" aria-label="Translation input modes">
           <button type="button" id="google-tab-text" data-google-mode="text" role="tab" aria-selected="true" aria-controls="google-mode-text" class="active">✎ Text</button>
-          <button type="button" id="google-tab-images" data-google-mode="images" role="tab" aria-selected="false" aria-controls="google-mode-images">▧ Images</button>
+          <button type="button" id="google-tab-images" data-google-mode="images" role="tab" aria-selected="false" aria-controls="google-mode-images">▧ Image OCR</button>
           <button type="button" id="google-tab-documents" data-google-mode="documents" role="tab" aria-selected="false" aria-controls="google-mode-documents">▤ Documents</button>
-          <button type="button" id="google-tab-websites" data-google-mode="websites" role="tab" aria-selected="false" aria-controls="google-mode-websites">↗ Websites</button>
         </div>
+
         <section class="google-mode-content" id="google-mode-text" role="tabpanel" aria-labelledby="google-tab-text">
-          <div class="google-mode-heading"><h3>Translate written text</h3><span class="google-tag">Source stays here until you open Google</span></div>
-          <label for="google-text" class="google-field-label">TEXT TO TRANSLATE</label>
-          <textarea id="google-text" dir="auto" rows="7" placeholder="Paste English or Tamil text here, or import the text from your writer…"></textarea>
-          <div class="google-text-meta"><span id="google-text-count">0 characters</span><button id="google-use-editor" type="button">↑ Use my writer text</button></div>
-          <div class="google-action-row">
-            <a id="google-open-text" class="action-button primary" target="_blank" rel="noopener noreferrer" href="https://translate.google.co.in/?sl=auto&amp;tl=ta&amp;op=translate">Open translation on Google ↗</a>
-            <button id="google-copy-source" class="action-button" type="button">⧉ Copy source</button>
-            <button id="google-paste-result" class="action-button" type="button">↓ Paste result into writer</button>
-          </div>
-          <p id="google-text-status" class="google-note" role="status" aria-live="polite">Text is sent to Google Translate only when you open the link. Copy the result on Google and paste it back into the writer if needed.</p>
+          <div class="google-mode-heading"><h3>Translate text</h3><span class="google-tag">POST → Google Cloud Translation API</span></div>
+          <label class="google-field-label" for="google-text">SOURCE TEXT</label>
+          <textarea id="google-text" dir="auto" rows="7" maxlength="10000" placeholder="Type or paste text in any supported language…"></textarea>
+          <div class="google-text-meta"><span id="google-text-count">0 / 10,000 characters</span><button id="google-use-editor" type="button">↑ Use my writer text</button></div>
+          <div class="google-action-row"><button id="google-translate-text" type="button" class="action-button primary">Translate text →</button><button id="google-copy-source" type="button" class="action-button">⧉ Copy source</button></div>
         </section>
+
         <section class="google-mode-content" id="google-mode-images" role="tabpanel" aria-labelledby="google-tab-images" hidden>
-          <div class="google-icon" aria-hidden="true">▧</div>
-          <h3>Translate text inside images</h3>
-          <p>Google Translate accepts JPG, PNG and WebP images. Open Google, choose <strong>Images</strong>, then select your image on Google’s website. Google may let you copy translated text or download the translated image.</p>
-          <a id="google-open-images" class="action-button primary google-main-link" target="_blank" rel="noopener noreferrer" href="https://translate.google.co.in/?sl=auto&amp;tl=ta&amp;op=images">Open Google image translation ↗</a>
-          <p class="google-note">For your privacy, e2t does not read or upload your selected images. Any image you upload to Google is processed under Google’s terms.</p>
+          <div class="google-mode-heading"><h3>Translate text in an image</h3><span class="google-tag">Google Cloud Vision OCR</span></div>
+          <p>Choose a JPG, PNG, or WebP image under 2 MB. The serverless API reads its text, then translates it. It does not produce a visually translated image.</p>
+          <label class="google-field-label" for="google-image-file">IMAGE FILE</label>
+          <input id="google-image-file" type="file" accept="image/jpeg,image/png,image/webp" />
+          <p class="google-file-caption" id="google-image-description">No image selected.</p>
+          <div class="google-action-row"><button id="google-translate-image" type="button" class="action-button primary">Read and translate image →</button></div>
         </section>
+
         <section class="google-mode-content" id="google-mode-documents" role="tabpanel" aria-labelledby="google-tab-documents" hidden>
-          <div class="google-icon" aria-hidden="true">▤</div>
-          <h3>Translate Word, PDF & Office files</h3>
-          <p>Open Google Translate’s <strong>Documents</strong> mode and select a <strong>.docx, .pdf, .pptx or .xlsx</strong> file there. Supported documents are up to 10 MB; PDFs may have up to 300 pages. Google offers a translated document to download.</p>
-          <a id="google-open-documents" class="action-button primary google-main-link" target="_blank" rel="noopener noreferrer" href="https://translate.google.co.in/?sl=auto&amp;tl=ta&amp;op=docs">Open Google document translation ↗</a>
-          <p class="google-note">Google’s document translator is not available on small screens. Text inside scanned PDF pages is not translated. Your files are uploaded directly to Google, not through e2t.</p>
+          <div class="google-mode-heading"><h3>Translate document text</h3><span class="google-tag">Extract locally · Translate via API</span></div>
+          <p>Choose TXT, MD, DOCX or PDF (selectable text only), up to 8 MB and 10,000 extracted characters. e2t extracts the text in your browser and sends only that text for translation. Document formatting, charts, and images are not preserved.</p>
+          <label class="google-field-label" for="google-document-file">DOCUMENT FILE</label>
+          <input id="google-document-file" type="file" accept=".txt,.md,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+          <p class="google-file-caption" id="google-document-description">No document selected.</p>
+          <div class="google-action-row"><button id="google-translate-document" type="button" class="action-button primary">Extract and translate →</button></div>
         </section>
-        <section class="google-mode-content" id="google-mode-websites" role="tabpanel" aria-labelledby="google-tab-websites" hidden>
-          <div class="google-icon" aria-hidden="true">↗</div>
-          <h3>Translate a website</h3>
-          <p>Open Google Translate’s <strong>Websites</strong> mode, paste the website URL there, and start translating. Availability depends on Google’s region and browser support.</p>
-          <a id="google-open-websites" class="action-button primary google-main-link" target="_blank" rel="noopener noreferrer" href="https://translate.google.co.in/?sl=auto&amp;tl=ta&amp;op=websites">Open Google website translation ↗</a>
-          <p class="google-note">This follows the <code>op=websites</code> mode from your example link. Text translation uses <code>op=translate</code> instead.</p>
+
+        <section class="google-result-panel" aria-labelledby="google-result-title">
+          <div class="google-result-heading"><div><div class="side-overline">TRANSLATION OUTPUT</div><h3 id="google-result-title">Your translation</h3></div><span id="google-detected-language" class="google-tag" hidden></span></div>
+          <div class="google-result-columns">
+            <div><label class="google-field-label" for="google-source-preview">RECOGNIZED / SOURCE TEXT</label><textarea id="google-source-preview" rows="6" dir="auto" readonly placeholder="The submitted source text will appear here."></textarea></div>
+            <div><label class="google-field-label" for="google-result">TRANSLATED TEXT · EDITABLE</label><textarea id="google-result" rows="6" dir="auto" placeholder="Your translation will appear here…"></textarea></div>
+          </div>
+          <div id="google-text-status" class="google-translation-status" role="status" aria-live="polite">Connect a translation API to get started.</div>
+          <div class="google-action-row"><button id="google-copy-result" class="action-button" type="button" disabled>⧉ Copy result</button><button id="google-insert-result" class="action-button primary" type="button" disabled>↓ Add to Tamil Writer</button><button id="google-cancel" class="action-button" type="button" hidden>Cancel request</button></div>
         </section>
-        <div class="google-privacy"><strong>Independent integration:</strong> Google Translate is operated by Google. e2t links to its public website, rather than using an undocumented translation API. Translations and uploads happen on Google; your locally saved writer draft is never shared automatically.</div>
+        <div class="google-privacy"><strong>Privacy:</strong> Your text or recognized document text is sent to your configured Worker and Google Cloud Translation only when you select Translate. Images are sent to your Worker and Google Cloud Vision for OCR. This is a paid Google Cloud API integration, not an unofficial Google Translate website endpoint. e2t does not automatically send or store your local draft on the API.</div>
       </section>
 
       <section id="writer-workspace" class="workspace" aria-label="Tamil writer workspace">

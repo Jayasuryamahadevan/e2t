@@ -1,73 +1,98 @@
-# e2t — Tamil Writer
+# e2t — Tamil Writer and In-Page Translation
 
-A free, privacy-first Tamil writing workspace. Type Tanglish (Romanized Tamil) or use a Tamil keyboard, then export your writing as **Word (.docx)**, **Text (.txt)**, or **PDF via the browser's print dialog**.
+A lightweight Tamil editor with phonetic Tanglish typing, auto-saved drafts and downloads in **DOCX**, **TXT** and **PDF** (using the browser's print dialog). The writer is entirely client-side. Translation is performed inside the e2t interface via a separately deployed serverless API backed by the **official Google Cloud APIs**, not the consumer Google Translate website.
 
 ## Features
 
-- Live English-to-Tamil phonetic input, batch Tanglish conversion, and direct Unicode Tamil typing.
-- Native Tamil characters, without remote translation services or a backend.
-- Document title, character and word counts, and adjustable editor font size.
-- Word export using a small built-in Office Open XML ZIP writer (no runtime dependencies).
-- UTF-8 text export and print-to-PDF with browser-native Tamil glyph shaping.
-- Local autosave using `localStorage`, import `.txt` / `.md`, clipboard copy, and a confirmation before clearing.
-- Responsive desktop/mobile interface; installable PWA with offline static asset caching.
-- 100% client-side for the built-in writer: documents are never sent to our server. External translation happens on the provider's website when requested.
-- Hash-based `#writer`, `#desh`, , `#translate`, and `#google` routes compatible with GitHub Pages. Optional external iframe views and prominent official-site fallback links.
+- Tamil phonetic typing and direct Tamil keyboard input.
+- Local draft autosave, character and word counts, text import, clipboard controls.
+- Browser-side DOCX/TXT export and native print-to-PDF; no server processing of writer documents.
+- Translation workspace on `#google` that displays requests, translated results, detected source language and editable output **without opening Google Translate**.
+- English, Tamil, Hindi, Malayalam, and Telugu language selection; auto-detect source.
+- Text translation through **Google Cloud Translation — Basic v2**.
+- Image OCR (`.png`, `.jpg`, `.webp`, under 2 MB) through **Google Cloud Vision** followed by translation. This translates extracted text; it does not redraw or reconstruct the original image.
+- Document text extraction for `.txt`, `.md`, `.docx` and text-based `.pdf` (under 8 MB, up to 10,000 characters); document text is translated and appears in the app, but layout and formatting are not preserved. Scanned PDFs are not supported by document mode.
+- Copy the translated result or add it to the Tamil Writer for DOCX/TXT/PDF export.
+- Explicit configuration/status indicators, cancellation, input validation, CORS and per-client rate limiting on the API, and accessible UI status messages.
+- Optional Desh Keyboard and Easy Tamil Typing companion sites on `#desh` and `#translate` (third-party iframe policy may block embedding).
+- Works on GitHub Pages as a static site. **Only translation** needs the Worker and external Google services.
 
-## Run locally
+## Architecture
 
-```bash
-npm start
+```text
+Browser (GitHub Pages, static e2t site)
+  |- Tamil writing, local drafts, DOCX/TXT/PDF export (no backend)
+  |- Translate Text --POST JSON-------------------┐
+  |- Translate Image --POST base64 PNG/JPG/WebP-->| Cloudflare Worker /translate
+  |- Document: extract text locally --POST JSON--┘       |
+                                                        +- Google Cloud Translation API v2
+                                                        +- Google Cloud Vision API (image OCR)
+                                <---- JSON with sourceText + translatedText + detectedSourceLanguage
 ```
 
-Open http://localhost:4173. Node.js and Python 3 are sufficient, and `npm install` is **not** required.
+The **public** `translate.google.co.in` webpage isn't an API. e2t does **not** POST to that webpage, scrape its output, navigate there, or embed it. Instead, the Worker makes authenticated requests to official Google Cloud APIs.
 
-## Test
+## Deploy the static website
+
+The repository includes `.github/workflows/deploy.yml` for GitHub Pages. Enable **Settings → Pages → Source: GitHub Actions** once. The site lives at `https://jayasuryamahadevan.github.io/e2t/`.
+
+The writing/export features run without any configuration. Translation displays **Not configured** until a Worker endpoint is published in `lib/translation-config.js`, or a trusted endpoint is entered in the UI.
+
+## Set up Google-powered in-page translation
+
+This is a one-time operation for the **site owner**. It requires a Google Cloud project with billing and a Cloudflare Workers account (plan limits and Google usage charges apply).
+
+1. In Google Cloud Console, enable **Cloud Translation API** and **Cloud Vision API** on a billing-enabled project. Create a Google Cloud API key and **restrict it to those two APIs**. Store this key only as a Worker secret. A leaked key can create charges; configure Google Cloud billing budgets and quotas.
+2. In the repository, open a terminal at the repo root. Install and authenticate to Wrangler, if needed: `npx wrangler login`. Then deploy the Worker: `npx wrangler deploy --config worker/wrangler.jsonc` (alternatively `cd worker` and use `npx wrangler deploy`). The account's rate-limiting binding must be supported by its Cloudflare plan.
+3. Set the secret for the deployed Worker, using `npx wrangler secret put GOOGLE_API_KEY --config worker/wrangler.jsonc` and paste the key at the prompt. **Do not commit the key** or put it in the browser. Note that Wrangler can ask for the secret before deployment when required; deploy again after adding it if needed.
+4. The Worker deployment returns a URL, for example `https://e2t-translate-api.YOURNAME.workers.dev`. Set `DEFAULT_TRANSLATION_API_URL` in `lib/translation-config.js` to the public `https://e2t-translate-api.YOURNAME.workers.dev/translate` URL and commit it. GitHub Pages will deploy this publicly accessible URL for **all visitors**. Visitors can override the URL using the endpoint field in the UI if needed; they should not need to configure it individually.
+5. Type some text and click **Translate text →**. e2t sends a POST request to your Worker, which responds with a translated string. The browser displays the text in the result pane. No Google Translate website opens.
+
+The Worker allows requests from `https://jayasuryamahadevan.github.io` by default. If you deploy the frontend on another origin, change `worker/wrangler.jsonc` → `ALLOWED_ORIGIN` (use the exact **origin**, without `/e2t` or trailing slash), redeploy, and configure a matching endpoint in the UI.
+
+### Security and operational considerations
+
+- The Google API key is read only by the Worker from `env.GOOGLE_API_KEY`; it is never returned to visitors. The Worker uses `POST /translate` and its response includes no cacheable user data.
+- The Worker uses an origin allowlist and a Cloudflare rate-limit binding (10 requests/min per client IP, approximated per edge location). **CORS and Origin validation are not authentication:** non-browser clients can spoof the Origin header. Apply strict project quotas, budget alerts, WAF rules and/or user authentication and Turnstile if the API is made public.
+- Request limits: 10,000 text characters; images under 2 MB; documents under 8 MB containing at most 10,000 extractable characters. There is no arbitrary website scraping or server-side file storage.
+- Images go to Google Cloud Vision; text and extracted document contents go to Google Cloud Translation. These are third-party paid services subject to Google's terms and data handling rules. Do not submit sensitive data without assessing those policies.
+- Document extraction uses dynamically imported JSZip and PDF.js packages from the pinned jsDelivr CDN, so opening DOCX/PDF files requires internet access. TXT and Markdown files need no parsing dependency.
+- `localStorage` saves the draft and configured Worker **URL**, not the Google key. The URL must be trusted because text is sent there when you click Translate. Avoid entering third-party endpoints you do not control.
+- The API is not provisioned automatically from this repository. A GitHub Pages deployment alone does not turn on Google-powered translation.
+
+## Request/response contract
+
+For text, the browser POSTs JSON to your Worker:
+
+```json
+{"kind":"text","source":"en","target":"ta","text":"Hello"}
+```
+
+For images, it sends `{"kind":"image","source":"auto","target":"ta","imageBase64":"..."}`.
+
+A successful response has the form:
+
+```json
+{"sourceText":"Hello","translatedText":"வணக்கம்","detectedSourceLanguage":"en"}
+```
+
+All errors are `{ "error": "Human-readable message" }` with an appropriate HTTP status.
+
+## Local development and tests
 
 ```bash
 npm test
+npm start
 ```
 
-Unit tests cover phonetic conversion, Unicode/XML escaping, generated DOCX structure, and download file names. GitHub Actions runs them on every push and pull request.
+Open `http://localhost:4173` to use the browser app. Since production CORS allows only the Pages origin, set the Worker `ALLOWED_ORIGIN` to `http://localhost:4173` for local end-to-end testing (remember to reset it before publishing); the unit tests mock Google calls and do not require a real Google key.
 
-## Static hosting
+## Limitations
 
-Deploy the repository directly to GitHub Pages, Netlify, Cloudflare Pages, or Vercel as static files. There is no build step. A Pages deployment workflow is included. On GitHub, go to **Settings → Pages → Build and deployment → Source → GitHub Actions** to enable publishing (one-time setup). The live site will then be at `https://jayasuryamahadevan.github.io/e2t/` after a successful deployment. Alternatively you can choose **Deploy from a branch → main → / (root)** for GitHub-managed static publishing.
-
-## How PDF downloads work
-
-Click **Save as PDF** to open the browser's print dialog, and select **Save as PDF** as the destination. This renders Tamil with the user's browser/system fonts; PDF export is not performed by a cloud API.
-
-## Keyboard examples
-
-| Input | Output |
-|---|---|
-| `vanakkam` | வணக்கம் |
-| `nandri` | நன்றி |
-| `tamizh` | தமிழ் |
-| `amma` | அம்மா |
-| `zh` | ழ் |
-| `th` | த் |
-| `N` | ண் |
-
-The phonetic mode uses a lightweight deterministic transliteration table with a short set of common-word overrides. It is **not** a full natural-language suggestion engine. For exact spellings, users can switch to their device's Tamil keyboard in **Direct typing** mode.
-
-## External Tamil tools / routing
-
-- **Tamil Writer (`#writer`)**: Native, on-device Tamil text editor, document export and draft autosave. No server or API needed.
-- **Desh Tamil Keyboard (`#desh`)**: Opens `https://www.deshkeyboard.com/tamil-typing/` inside an optional iframe where allowed, with a guaranteed link to the official site. For phonetic typing and suggestions.
-- **Easy Tamil Typing translation (`#translate`)**: Opens `https://www.easytamiltyping.com/english/to/tamil/translation` the same way. For translating the *meaning* of English phrases into Tamil, not transliterating phonetic Tanglish.
-- **Google Translate (`#google`)**: Dedicated four-tab companion for **Text**, **Images**, **Documents** and **Websites**. Text can be loaded from the editor and safely prefilled in Google’s public text-translation interface using `sl=auto&tl=ta&op=translate&text=...`. The source/target selectors customize URLs. Oversized URLs are deliberately not prefilled or truncated: copy the text and paste it on Google instead. Other modes use `op=images`, `op=docs` and `op=websites`. For images and documents, open Google and upload directly there. Use **Paste result into writer** to copy translated text back and export DOCX/TXT/PDF with the existing writer.
-
-### Important Google Translate integration limitations
-
-The `translate.google.co.in` URL is the **public Google Translate web application, not a translation API**. GitHub Pages cannot authenticate to the paid Cloud Translation API securely, and cannot use browser JavaScript to read the result in a cross-origin Google tab or silently upload local files there. This integration uses explicit user-initiated official links, not scraping, an unofficial endpoint, or a falsely embedded translation engine. The browser sends text to Google **only if a user opens the prefilled link**. Image/document translation is performed on Google’s website; no uploads go through e2t. Google documents support `.docx`, `.pdf`, `.pptx`, `.xlsx` up to 10 MB (PDFs up to 300 pages); document mode may be unavailable on mobile, and scanned text is not translated. Google’s own limits, terms and availability apply.
-
-Use **Copy my document text** to move writing to the external service and **Paste clipboard into document** to add its result to the writer. Browsers prohibit reading or controlling cross-origin iframe content, and providers may prohibit embedding; there is deliberately no undocumented API scraping or iframe bypass. External services require connectivity, are not affiliated with e2t, and have their own terms and privacy policies. Opening those views shares your browser connection with the external provider, but your draft is never automatically uploaded to them.
-
-## Privacy
-
-Drafts are stored locally on the device. DOCX/TXT bytes are generated in the browser, and the print dialog handles PDF output. The native editor contains no analytics, remote API requests, or third-party JavaScript dependencies. Selecting an external tool loads that provider, which may set cookies or collect data under its own privacy terms.
+- This implementation handles text, text extracted from images, and text extracted from documents. It is **not** the full Google Translate website or Cloud Translation Advanced document-layout engine.
+- Supported Google translation languages are limited to the five listed in the interface; add more supported language codes in the frontend and Worker allowlists if needed.
+- `.docx` extraction reads text only; formatting is lost. PDF extraction works on selectable text, not scanned or image-only PDFs. OCR recognizes image text but doesn't overlay translated text on the picture.
+- Google API calls may incur charges; API outages, quota limits or inaccurate language detection can affect results.
 
 ## License
 
