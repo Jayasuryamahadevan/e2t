@@ -23,6 +23,7 @@ class Element {
   getAttribute(key) { return this.attributes[key] ?? null; }
   removeAttribute(key) { delete this.attributes[key]; }
   focus() {}
+  setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   click() { return this.dispatch('click'); }
   append() {}
   remove() {}
@@ -83,14 +84,27 @@ test('browser app handles phonetic typing, direct typing, PDF dialog and autosav
         editor.dispatch('input');
       }
     }
-    for (const char of 'vanakkam nandri') type(char);
-    assert.equal(editor.value, 'வணக்கம் நன்றி');
+    for (const char of 'vanakkam') type(char);
+    assert.equal(editor.value, 'vanakkam', 'Latin letters must remain untouched while typing');
+    type(' ');
+    assert.equal(editor.value, 'வணக்கம் ');
+    for (const char of 'nandrX') type(char);
+    assert.equal(editor.value, 'வணக்கம் nandrX', 'Second word stays English until Space');
+
+    let blocked = false;
+    editor.dispatch('beforeinput', {inputType:'deleteContentBackward',preventDefault:() => { blocked = true; }});
+    assert.equal(blocked, false, 'Normal backspace must not be intercepted');
+    editor.setRangeText('', editor.selectionStart - 1, editor.selectionEnd);
+    editor.dispatch('input', {inputType:'deleteContentBackward'});
+    type('i');
+    assert.equal(editor.value, 'வணக்கம் nandri');
+    type(' ');
+    assert.equal(editor.value, 'வணக்கம் நன்றி ');
     assert.match(get('word-count').textContent, /2 words/);
     assert.match(get('character-count').textContent, /characters/);
-    let blocked = false;
-    editor.dispatch('beforeinput', { inputType: 'deleteContentBackward', preventDefault: () => { blocked = true; } });
-    assert.equal(blocked, true);
-    type('i');
+    // Simulate native deletion of the trailing space.
+    editor.setRangeText('', editor.selectionStart - 1, editor.selectionEnd);
+    editor.dispatch('input', {inputType:'deleteContentBackward'});
     assert.equal(editor.value, 'வணக்கம் நன்றி');
     get('download-docx').click();
     get('download-txt').click();
@@ -137,6 +151,24 @@ test('browser app handles phonetic typing, direct typing, PDF dialog and autosav
     get('mode-direct').click();
     type('a');
     assert.equal(editor.value, 'வணக்கம் நன்றி\n\nHelloa');
+    get('mode-phonetic').click();
+    editor.value = 'enna';
+    editor.setSelectionRange(4, 4);
+    editor.dispatch('input', { inputType:'insertText', data:'a' });
+    editor.setRangeText(' ', 4, 4);
+    editor.dispatch('input', { inputType:'insertText', data:' ' });
+    assert.equal(editor.value, 'என்ன ', 'Mobile fallback commits after a native space');
+    editor.value = 'vanakkam nandri';
+    editor.setSelectionRange(editor.value.length, editor.value.length);
+    editor.dispatch('input', { inputType:'insertFromPaste', data:'vanakkam nandri' });
+    assert.equal(editor.value, 'vanakkam nandri', 'Pastes are not modified');
+    type(' ');
+    assert.equal(editor.value, 'vanakkam நன்றி ', 'Only word before Space converts');
+    get('mode-direct').click();
+    editor.value = 'english';
+    editor.setSelectionRange(7, 7);
+    type(' ');
+    assert.equal(editor.value, 'english ', 'Direct mode never transliterates');
   } finally {
     globalThis.setTimeout = nativeTimeout;
     globalThis.fetch = nativeFetch;

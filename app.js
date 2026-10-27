@@ -1,4 +1,5 @@
 import { transliterateWord, transliterateText } from './lib/transliterate.js';
+import { findTanglishWordToCommit } from './lib/typing-commit.js';
 import { createDocx, safeFileName } from './lib/docx.js';
 import { translateRequest, imageToBase64, validateEndpoint, MAX_TEXT_LENGTH } from './lib/translation-api.js';
 import { extractDocumentText } from './lib/document-reader.js';
@@ -17,7 +18,6 @@ const toast = $('toast');
 const DRAFT_KEY = 'e2t-draft-v1';
 
 let typingMode = 'phonetic';
-let activeWord = null;
 let saveTimer = null;
 let toastTimer = null;
 let isComposing = false;
@@ -52,6 +52,7 @@ function saveDraft() {
 }
 
 function scheduleSave() {
+  previousEditorValue = editor.value;
   updateCounts();
   clearTimeout(saveTimer);
   saveStatus.innerHTML = '<span class="saved-dot"></span> Saving…';
@@ -60,13 +61,12 @@ function scheduleSave() {
 
 function setMode(mode, persist = true) {
   typingMode = mode;
-  activeWord = null;
   modePhonetic.classList.toggle('selected', mode === 'phonetic');
   modeDirect.classList.toggle('selected', mode === 'direct');
   modePhonetic.setAttribute('aria-pressed', String(mode === 'phonetic'));
   modeDirect.setAttribute('aria-pressed', String(mode === 'direct'));
   typingHelp.innerHTML = mode === 'phonetic'
-    ? 'Type <strong>vanakkam</strong> → <strong lang="ta">வணக்கம்</strong>. Press Space to finish a word.'
+    ? 'Type <strong>vanakkam</strong> in English. Press <strong>Space</strong> to convert it into <strong lang="ta">வணக்கம்</strong>.'
     : 'Type with your usual keyboard or your device’s Tamil input method.';
   if (persist) scheduleSave();
 }
@@ -91,44 +91,57 @@ function insertAtSelection(text, start = editor.selectionStart, end = editor.sel
   scheduleSave();
 }
 
-editor.addEventListener('compositionstart', () => { isComposing = true; activeWord = null; });
-editor.addEventListener('compositionend', () => { isComposing = false; activeWord = null; scheduleSave(); });
+// Keep active Tanglish words in Latin letters. Only the Space key commits a word.
+let skipNextSpaceInput = false;
+let previousEditorValue = '';
+editor.addEventListener('compositionstart', () => { isComposing = true; });
+editor.addEventListener('compositionend', () => { isComposing = false; scheduleSave(); });
 editor.addEventListener('beforeinput', event => {
   if (typingMode !== 'phonetic' || isComposing || event.isComposing) return;
-
-  if (event.inputType === 'deleteContentBackward' && activeWord && editor.selectionStart === activeWord.end && editor.selectionEnd === activeWord.end) {
-    event.preventDefault();
-    const raw = activeWord.raw.slice(0, -1);
-    const rendered = transliterateWord(raw);
-    const start = activeWord.start;
-    insertAtSelection(rendered, start, activeWord.end);
-    activeWord = raw ? { raw, start, end: start + rendered.length } : null;
+  if (event.inputType !== 'insertText' || event.data !== ' ') {
+    skipNextSpaceInput = false;
     return;
   }
 
-  if (event.inputType !== 'insertText' || !event.data || !/^[A-Za-z]$/.test(event.data)) {
-    activeWord = null;
+  // Replacing a selection is a normal text edit, not completion of a word.
+  if (editor.selectionStart !== editor.selectionEnd) {
+    skipNextSpaceInput = true;
     return;
   }
+  const edit = findTanglishWordToCommit(editor.value, editor.selectionStart);
+  if (!edit) return;
 
   event.preventDefault();
-  const start = editor.selectionStart;
-  const end = editor.selectionEnd;
-  const continuing = activeWord && start === end && start === activeWord.end;
-  const raw = (continuing ? activeWord.raw : '') + event.data;
-  const replacementStart = continuing ? activeWord.start : start;
-  const rendered = transliterateWord(raw);
-  insertAtSelection(rendered, replacementStart, end);
-  activeWord = { raw, start: replacementStart, end: replacementStart + rendered.length };
+  editor.setRangeText(edit.replacement + ' ', edit.start, edit.end, 'end');
+  scheduleSave();
 });
 
-editor.addEventListener('input', scheduleSave);
-editor.addEventListener('click', () => { activeWord = null; });
-editor.addEventListener('keydown', event => {
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Escape'].includes(event.key) || event.ctrlKey || event.metaKey || event.altKey) activeWord = null;
+// Mobile keyboards sometimes skip beforeinput. In that case, convert only
+// after a literal Space has been inserted by a normal typing input event.
+editor.addEventListener('input', event => {
+  if (skipNextSpaceInput) {
+    skipNextSpaceInput = false;
+    scheduleSave();
+    previousEditorValue = editor.value;
+    return;
+  }
+  const caret = editor.selectionStart;
+  const newlyInsertedSpace = event.data === ' ' ||
+    (event.data == null && editor.value.length === previousEditorValue.length + 1 && editor.value[caret - 1] === ' ');
+  if (typingMode === 'phonetic' && !isComposing && !event.isComposing &&
+      event.inputType === 'insertText' && newlyInsertedSpace && caret > 0 &&
+      editor.value[caret - 1] === ' ' && editor.selectionEnd === caret) {
+    const edit = findTanglishWordToCommit(editor.value, caret - 1);
+    if (edit) {
+      editor.setRangeText(edit.replacement, edit.start, edit.end, 'end');
+      // Keep caret AFTER the existing space.
+      const afterSpace = editor.selectionStart + 1;
+      editor.setSelectionRange(afterSpace, afterSpace);
+    }
+  }
+  scheduleSave();
+  previousEditorValue = editor.value;
 });
-editor.addEventListener('paste', () => { activeWord = null; });
-editor.addEventListener('drop', () => { activeWord = null; });
 
 documentTitle.addEventListener('input', scheduleSave);
 modePhonetic.addEventListener('click', () => setMode('phonetic'));
@@ -192,7 +205,6 @@ $('clear-text').addEventListener('click', () => {
   if (!editor.value) return;
   if (!window.confirm('Clear the editor? This will replace your locally saved draft.')) return;
   editor.value = '';
-  activeWord = null;
   scheduleSave();
   editor.focus();
   announce('Editor cleared.');
@@ -208,7 +220,6 @@ $('file-input').addEventListener('change', async event => {
   try {
     editor.value = (await file.text()).replace(/^\uFEFF/, '');
     documentTitle.value = file.name.replace(/\.(txt|md)$/i, '');
-    activeWord = null;
     scheduleSave();
     announce('Text file opened.');
   } catch {
@@ -221,7 +232,6 @@ document.querySelectorAll('[data-sample]').forEach(button => button.addEventList
   const rendered = transliterateWord(button.dataset.sample);
   const spacer = editor.value && !/\s$/.test(editor.value.slice(0, editor.selectionStart)) ? ' ' : '';
   insertAtSelection(spacer + rendered);
-  activeWord = null;
   editor.focus();
 }));
 
@@ -300,7 +310,6 @@ $('convert-text').addEventListener('click', () => {
   if (!/[a-z]/i.test(editor.value)) { announce('No English-letter words to convert.'); return; }
   if (!window.confirm('Convert English-letter words phonetically to Tamil? This is not English-to-Tamil translation.')) return;
   editor.value = transliterateText(editor.value);
-  activeWord = null;
   scheduleSave();
   announce('Converted Tanglish words to Tamil script.');
 });
@@ -473,7 +482,6 @@ $('google-insert-result').addEventListener('click', () => {
   if (!text) return;
   const separator = editor.value && !editor.value.endsWith('\n') ? '\n\n' : '';
   insertAtSelection(separator + text, editor.value.length, editor.value.length);
-  activeWord = null;
   window.location.hash = '#writer';
   renderRoute();
   announce('Translation added to writer. Download as DOCX or PDF whenever ready.');

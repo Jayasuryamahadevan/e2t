@@ -4,7 +4,9 @@ A lightweight Tamil editor with phonetic Tanglish typing, auto-saved drafts and 
 
 ## Features
 
-- Tamil phonetic typing and direct Tamil keyboard input.
+- **Space-to-convert Tanglish input:** type an entire word in Latin letters (e.g., `vanakkam`), then press **Space** to turn only that word into Tamil (`வணக்கம் `). Letters are not replaced while you type.
+- Direct Tamil keyboard input is preserved, with normal backspace, copy/paste and cursor editing.
+- Expanded offline mapping for commonly typed Tamil words; this is transliteration of pronunciation, not semantic English-to-Tamil translation.
 - Local draft autosave, character and word counts, text import, clipboard controls.
 - Browser-side DOCX/TXT export and native print-to-PDF; no server processing of writer documents.
 - Translation workspace on `#google` that displays requests, translated results, detected source language and editable output **without opening Google Translate**.
@@ -97,3 +99,11 @@ Open `http://localhost:4173` to use the browser app. Since production CORS allow
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+### Space-to-convert typing behavior
+
+1. Switch to **Tanglish / Phonetic** mode and type `vanakkam` — it remains `vanakkam` as you type.
+2. Press **Space** — it becomes `வணக்கம் `, leaving the cursor after the space.
+3. Type `nandri` — it remains Latin until the next **Space**, when it becomes `நன்றி `.
+
+Only the whole word immediately before a typed Space is converted. Punctuation around words is preserved. The editor does not automatically modify URLs, email addresses, numeric tokens, mixed-script tokens, pasted text or text being composed with an IME. **Direct typing** never converts Latin letters. The offline transliteration mappings are helpful but not a dictionary-quality suggestion/translation service for every possible spelling.
