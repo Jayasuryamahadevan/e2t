@@ -34,17 +34,17 @@ class Element {
   }
 }
 
-test('browser app handles phonetic typing, direct typing, PDF dialog and autosave without a server', async () => {
+test('browser app supports Tanglish space-to-convert, export and autosave without network calls', async () => {
   const elements = new Map();
   const get = id => {
-    if (!elements.has(id)) elements.set(id, new Element(id === 'editor-size' ? '20' : id === 'document-title' ? 'என் ஆவணம்' : id === 'google-source-language' ? 'auto' : id === 'google-target-language' ? 'ta' : ''));
+    if (!elements.has(id)) elements.set(id, new Element(id === 'editor-size' ? '20' : id === 'document-title' ? 'என் ஆவணம்' : ''));
     return elements.get(id);
   };
   const storage = new Map();
   const windowEvents = new Map();
   globalThis.document = {
     getElementById: get,
-    querySelectorAll: selector => selector === '[data-google-mode]' ? ['text','images','documents'].map(mode => { const el = get('google-tab-' + mode); el.dataset.googleMode = mode; return el; }) : [],
+    querySelectorAll: () => [],
     createElement: () => new Element(),
     body: { append() {} },
   };
@@ -62,8 +62,7 @@ test('browser app handles phonetic typing, direct typing, PDF dialog and autosav
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { writeText: async () => {} } } });
   const nativeFetch = globalThis.fetch;
   globalThis.fetch = async (_url, options) => {
-    assert.equal(options.method, 'POST');
-    return Response.json({translatedText:'Hello',sourceText:'வணக்கம் நன்றி',detectedSourceLanguage:'ta'});
+    throw new Error('Tanglish writer must not make network requests');
   };
   const nativeTimeout = globalThis.setTimeout;
   globalThis.setTimeout = (...args) => { const handle = nativeTimeout(...args); handle.unref?.(); return handle; };
@@ -115,43 +114,8 @@ test('browser app handles phonetic typing, direct typing, PDF dialog and autosav
     windowEvents.get('pagehide')();
     const saved = JSON.parse(storage.get('e2t-draft-v1'));
     assert.equal(saved.body, 'வணக்கம் நன்றி');
-    window.location.hash = '#desh';
-    windowEvents.get('hashchange')();
-    assert.equal(get('provider-panel').hidden, false);
-    assert.equal(get('writer-workspace').hidden, true);
-    assert.equal(get('provider-frame').getAttribute('src'), 'https://www.deshkeyboard.com/tamil-typing/');
-    window.location.hash = '#translate';
-    windowEvents.get('hashchange')();
-    assert.equal(get('provider-external').href, 'https://www.easytamiltyping.com/english/to/tamil/translation');
-    window.location.hash = '#google';
-    windowEvents.get('hashchange')();
-    assert.equal(get('google-panel').hidden, false);
-    assert.equal(get('provider-panel').hidden, true);
-    assert.equal(get('writer-workspace').hidden, true);
-    get('google-use-editor').click();
-    assert.equal(get('google-text').value, 'வணக்கம் நன்றி');
-    get('google-api-url').value = 'https://api.example.workers.dev/translate';
-    get('google-save-endpoint').click();
-    assert.equal(storage.get('e2t-translation-api-url'), 'https://api.example.workers.dev/translate');
-    get('google-target-language').value = 'en';
-    get('google-target-language').dispatch('change');
-    await get('google-translate-text').click();
-    assert.equal(get('google-result').value, 'Hello');
-    assert.equal(get('google-source-preview').value, 'வணக்கம் நன்றி');
-    get('google-tab-images').click();
-    assert.equal(get('google-mode-images').hidden, false);
-    get('google-tab-documents').click();
-    assert.equal(get('google-mode-documents').hidden, false);
-    get('google-insert-result').click();
-    assert.equal(get('editor').value, 'வணக்கம் நன்றி\n\nHello');
-    window.location.hash = '#writer';
-    windowEvents.get('hashchange')();
-    assert.equal(get('google-panel').hidden, true);
-    assert.equal(get('provider-frame').getAttribute('src'), null);
-    get('mode-direct').click();
-    type('a');
-    assert.equal(editor.value, 'வணக்கம் நன்றி\n\nHelloa');
-    get('mode-phonetic').click();
+    // Only the editor is present; no external routes are needed.
+    assert.equal(get('editor').value, 'வணக்கம் நன்றி');
     editor.value = 'enna';
     editor.setSelectionRange(4, 4);
     editor.dispatch('input', { inputType:'insertText', data:'a' });
@@ -164,11 +128,18 @@ test('browser app handles phonetic typing, direct typing, PDF dialog and autosav
     assert.equal(editor.value, 'vanakkam nandri', 'Pastes are not modified');
     type(' ');
     assert.equal(editor.value, 'vanakkam நன்றி ', 'Only word before Space converts');
-    get('mode-direct').click();
-    editor.value = 'english';
-    editor.setSelectionRange(7, 7);
+    // Tamil script typed directly is always preserved.
+    editor.value = 'தமிழ்';
+    editor.setSelectionRange(editor.value.length, editor.value.length);
+    editor.dispatch('input', { inputType: 'insertFromPaste', data: 'தமிழ்' });
     type(' ');
-    assert.equal(editor.value, 'english ', 'Direct mode never transliterates');
+    assert.equal(editor.value, 'தமிழ் ');
+    // Converting a selected sample remains a local operation.
+    editor.value = 'vanakkam';
+    editor.setSelectionRange(8, 8);
+    editor.dispatch('input', { inputType: 'insertFromPaste', data: 'vanakkam' });
+    type(' ');
+    assert.equal(editor.value, 'வணக்கம் ');
   } finally {
     globalThis.setTimeout = nativeTimeout;
     globalThis.fetch = nativeFetch;
